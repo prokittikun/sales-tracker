@@ -27,8 +27,14 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
     <div>
         <h4 class="mb-1 fw-bold">
             <i class="bi bi-receipt me-2 text-primary"></i>รายการขาย
+            <?php if (!empty($customerName)): ?>
+                <span class="badge bg-info ms-2"><?= e($customerName) ?></span>
+            <?php endif; ?>
         </h4>
         <p class="text-muted mb-0 small">
+            <?php if (!empty($customerName)): ?>
+                <i class="bi bi-person me-1"></i><?= e($customerName) ?> • 
+            <?php endif; ?>
             <?= $monthDisplay ?> <?= toBuddhistYear($year) ?>
         </p>
     </div>
@@ -131,6 +137,44 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
 <!-- ╚══════════════════════════════════════════════════════════╝ -->
 <div class="row g-3 mb-4">
 
+    <!-- Work type summary cards (dynamic from database) -->
+    <?php foreach ($workTypes as $wt): ?>
+    <?php
+    $wtId = (int)$wt['id'];
+    $qtyKey = 'wt' . $wtId . '_qty';
+    $amountKey = 'wt' . $wtId . '_amount';
+    $wtQty = (int)($totals[$qtyKey] ?? 0);
+    $wtAmount = (float)($totals[$amountKey] ?? 0);
+    
+    // Color and icon mapping for work types
+    $colorMap = [
+        1 => ['color' => '#0d6efd', 'icon' => 'cpu-fill', 'badge' => 'badge-wt1', 'textClass' => 'text-primary'],
+        2 => ['color' => '#157347', 'icon' => 'tools-fill', 'badge' => 'badge-wt2', 'textClass' => 'text-success'],
+    ];
+    $styling = $colorMap[$wtId] ?? ['color' => '#6c757d', 'icon' => 'box2-fill', 'badge' => 'bg-secondary', 'textClass' => 'text-secondary'];
+    ?>
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card h-100" style="border-left:4px solid <?= $styling['color'] ?> !important;">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <p class="text-muted small mb-1">
+                            <span class="badge <?= $styling['badge'] ?> rounded-pill me-1"><?= $wtId ?></span><?= e($wt['name']) ?>
+                        </p>
+                        <h5 class="fw-bold mb-0 text-amount <?= $styling['textClass'] ?>">
+                            <?= formatMoney($wtAmount) ?>
+                        </h5>
+                        <small class="text-muted"><?= number_format($wtQty) ?> ชิ้น</small>
+                    </div>
+                    <div class="fs-2 opacity-50" style="color:<?= $styling['color'] ?>">
+                        <i class="bi bi-<?= $styling['icon'] ?>"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+
     <!-- Total transactions -->
     <div class="col-6 col-lg-3">
         <div class="card summary-card border-primary h-100">
@@ -185,50 +229,6 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
         </div>
     </div>
 
-    <!-- Work type 1: ขายเฉพาะเครื่อง -->
-    <div class="col-6 col-lg-3">
-        <div class="card summary-card h-100" style="border-left:4px solid #0d6efd !important;">
-            <div class="card-body py-3 px-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <p class="text-muted small mb-1">
-                            <span class="badge badge-wt1 rounded-pill me-1">1</span>ขายเฉพาะเครื่อง
-                        </p>
-                        <h5 class="fw-bold mb-0 text-amount text-primary">
-                            <?= formatMoney((float)($totals['wt1_amount'] ?? 0)) ?>
-                        </h5>
-                        <small class="text-muted"><?= number_format((int)($totals['wt1_qty'] ?? 0)) ?> ชิ้น</small>
-                    </div>
-                    <div class="fs-2 opacity-50" style="color:#0d6efd">
-                        <i class="bi bi-cpu-fill"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Work type 2: ขายพร้อมติดตั้ง -->
-    <div class="col-6 col-lg-3">
-        <div class="card summary-card border-success h-100">
-            <div class="card-body py-3 px-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <p class="text-muted small mb-1">
-                            <span class="badge badge-wt2 rounded-pill me-1">2</span>ขายพร้อมติดตั้ง
-                        </p>
-                        <h5 class="fw-bold mb-0 text-amount text-success">
-                            <?= formatMoney((float)($totals['wt2_amount'] ?? 0)) ?>
-                        </h5>
-                        <small class="text-muted"><?= number_format((int)($totals['wt2_qty'] ?? 0)) ?> ชิ้น</small>
-                    </div>
-                    <div class="fs-2 text-success opacity-50">
-                        <i class="bi bi-tools"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Report link -->
     <div class="col-6 col-lg-3">
         <div class="card summary-card border-warning h-100">
@@ -263,7 +263,7 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
     <div class="card-header bg-white d-flex align-items-center justify-content-between py-2 px-3">
         <span class="fw-semibold">
             รายการขาย
-            <?php if ($productId > 0 || $workTypeId > 0): ?>
+            <?php if ($productId > 0 || $workTypeId > 0 || $customerId > 0): ?>
                 <span class="badge bg-primary ms-1">กรองอยู่</span>
             <?php endif; ?>
         </span>
@@ -278,7 +278,10 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
             <i class="bi bi-inbox text-muted" style="font-size:3rem"></i>
             <p class="text-muted mt-3 mb-1 fw-semibold">ไม่พบรายการขาย</p>
             <p class="text-muted small mb-3">
-                <?php if ($productId > 0 || $workTypeId > 0): ?>
+                <?php if ($customerId > 0): ?>
+                    <!--customer specific message -->
+                    <?= e($customerName) ?> ยังไม่มีรายการขายใน<?= thaiMonthName($month) ?> <?= toBuddhistYear($year) ?>
+                <?php elseif ($productId > 0 || $workTypeId > 0): ?>
                     ลองเปลี่ยนตัวกรองแล้วค้นหาใหม่
                 <?php else: ?>
                     ยังไม่มีรายการขายใน<?= thaiMonthName($month) ?> <?= toBuddhistYear($year) ?>
@@ -409,7 +412,13 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
                 <tfoot class="table-light">
                     <tr class="fw-bold">
                         <td colspan="5" class="text-end text-muted">
-                            รวม (<?= number_format(count($sales)) ?> รายการที่กรอง):
+                            <?php if ($customerId > 0): ?>
+                                รวมของ <?= e($customerName) ?> (<?= number_format(count($sales)) ?> รายการ):
+                            <?php elseif ($productId > 0 || $workTypeId > 0): ?>
+                                รวม (<?= number_format(count($sales)) ?> รายการที่กรอง):
+                            <?php else: ?>
+                                รวม (<?= number_format(count($sales)) ?> รายการที่กรอง):
+                            <?php endif; ?>
                         </td>
                         <td class="text-center text-amount">
                             <?= number_format(array_sum(array_column($sales, 'quantity'))) ?> ชิ้น
@@ -419,7 +428,7 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
                         </td>
                         <td colspan="2"></td>
                     </tr>
-                    <?php if ($productId > 0 || $workTypeId > 0): ?>
+                    <?php if (($productId > 0 || $workTypeId > 0) && $customerId === 0): ?>
                     <tr class="table-warning">
                         <td colspan="5" class="text-end text-muted small">
                             รวมทั้งเดือน (ไม่กรอง):

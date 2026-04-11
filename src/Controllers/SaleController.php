@@ -86,34 +86,60 @@ class SaleController
         $stmt->execute($params);
         $sales = $stmt->fetchAll();
 
-        // Monthly totals (always show full month/year totals, ignoring product/work_type filter)
+        // Fetch work types first (needed for dynamic totals query)
+        $workTypes  = $this->pdo->query("SELECT id, name FROM work_types ORDER BY id")->fetchAll();
+
+        // Monthly totals - build dynamic CASE statements for each work type
+        // Include customer filter if viewing specific customer
         $totalsWhereDate = $isYearly
             ? "WHERE YEAR(s.sale_date) = :year"
             : "WHERE MONTH(s.sale_date) = :month AND YEAR(s.sale_date) = :year";
+
+        $totalsWhere = $totalsWhereDate;
+        if ($customerId > 0) {
+            $totalsWhere .= " AND s.customer_id = :customer_id";
+        }
+
+        $caseClauses = [];
+        foreach ($workTypes as $wt) {
+            $wtId = (int)$wt['id'];
+            $caseClauses[] = "COALESCE(SUM(CASE WHEN s.work_type_id = {$wtId} THEN s.quantity ELSE 0 END), 0) AS wt{$wtId}_qty";
+            $caseClauses[] = "COALESCE(SUM(CASE WHEN s.work_type_id = {$wtId} THEN s.price ELSE 0 END), 0) AS wt{$wtId}_amount";
+        }
+
+        $caseSelect = !empty($caseClauses) ? ", " . implode(", ", $caseClauses) : "";
 
         $totalsStmt = $this->pdo->prepare("
             SELECT
                 COUNT(*)          AS total_rows,
                 SUM(s.quantity)   AS total_qty,
-                SUM(s.price)      AS total_amount,
-                COALESCE(SUM(CASE WHEN s.work_type_id = 1 THEN s.quantity ELSE 0 END), 0) AS wt1_qty,
-                COALESCE(SUM(CASE WHEN s.work_type_id = 1 THEN s.price ELSE 0 END), 0) AS wt1_amount,
-                COALESCE(SUM(CASE WHEN s.work_type_id = 2 THEN s.quantity ELSE 0 END), 0) AS wt2_qty,
-                COALESCE(SUM(CASE WHEN s.work_type_id = 2 THEN s.price ELSE 0 END), 0) AS wt2_amount
+                SUM(s.price)      AS total_amount
+                {$caseSelect}
             FROM sales s
-            {$totalsWhereDate}
+            {$totalsWhere}
         ");
         $totalsParams = [':year' => $year];
         if (!$isYearly) {
             $totalsParams[':month'] = $month;
         }
+        if ($customerId > 0) {
+            $totalsParams[':customer_id'] = $customerId;
+        }
         $totalsStmt->execute($totalsParams);
         $totals = $totalsStmt->fetch();
+
+        // Get customer name if viewing specific customer
+        $customerName = null;
+        if ($customerId > 0) {
+            $customerStmt = $this->pdo->prepare("SELECT name FROM customers WHERE id = :id");
+            $customerStmt->execute([':id' => $customerId]);
+            $customerRow = $customerStmt->fetch();
+            $customerName = $customerRow['name'] ?? null;
+        }
 
         // Filter options
         $products   = $this->pdo->query("SELECT id, name FROM products  ORDER BY name")->fetchAll();
         $categories = $this->pdo->query("SELECT id, name FROM categories ORDER BY name")->fetchAll();
-        $workTypes  = $this->pdo->query("SELECT id, name FROM work_types ORDER BY id")->fetchAll();
 
         // Build year options: current year ± 2
         $years = range((int) date('Y') - 2, (int) date('Y') + 1);
@@ -122,7 +148,7 @@ class SaleController
             'sales', 'totals',
             'month', 'year', 'years',
             'products', 'categories', 'workTypes',
-            'productId', 'categoryId', 'workTypeId', 'customerId'
+            'productId', 'categoryId', 'workTypeId', 'customerId', 'customerName'
         ));
     }
 

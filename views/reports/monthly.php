@@ -571,7 +571,12 @@ for ($m = 1; $m <= 12; $m++) {
                 </thead>
                 <tbody>
                     <?php foreach ($daySales as $idx => $sale): ?>
-                    <tr>
+                    <?php
+                    $wtId = (int)$sale['work_type_id'];
+                    $rowBgColor = $wtId === 1 ? 'rgba(13, 110, 253, 0.05)' : ($wtId === 2 ? 'rgba(21, 115, 71, 0.05)' : 'transparent');
+                    $borderColor = $wtId === 1 ? '#0d6efd' : ($wtId === 2 ? '#157347' : 'transparent');
+                    ?>
+                    <tr style="background-color: <?= $rowBgColor ?>; border-left: 3px solid <?= $borderColor ?>;">
                         <td class="text-center text-muted small ps-3">
                             <?= $idx + 1 ?>
                         </td>
@@ -589,7 +594,7 @@ for ($m = 1; $m <= 12; $m++) {
                                 <?= e($sale['product_name']) ?>
                             </span>
                         </td>
-                        <td>
+                        <td style="background-color: <?= $rowBgColor ?>; border-right: 2px solid <?= $borderColor ?>;">
                             <?php if ((int)$sale['work_type_id'] === 1): ?>
                                 <span class="badge badge-wt1 rounded-pill">
                                     <i class="bi bi-cpu me-1"></i><?= e($sale['work_type_name']) ?>
