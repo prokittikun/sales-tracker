@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sales_tracker_app
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: sales_tracker
+      DB_USER: sales_user
+      DB_PASS: sales_password
+    networks:
+      - sales_network
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: sales_tracker_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sales_tracker
+      MYSQL_USER: sales_user
+      MYSQL_PASSWORD: sales_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - sales_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  sales_network:
+    driver: bridge

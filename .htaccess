@@ -1,0 +1,25 @@
+# ============================================================
+# Sales Tracker — Apache URL Rewriting Rules
+# ============================================================
+# Redirect all requests to index.php (front controller)
+# ============================================================
+
+# Enable mod_rewrite
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Don't rewrite existing files or directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Rewrite all other requests to index.php
+    RewriteRule ^(.*)$ index.php?path=$1 [QSA,L]
+</IfModule>
+
+# Set default character encoding
+AddDefaultCharset utf-8
+
+# Disable directory listing
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>

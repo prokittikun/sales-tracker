@@ -1,0 +1,24 @@
+{
+    "name": "sales-tracker/app",
+    "description": "Sales Tracker - ระบบบันทึกและสรุปยอดขาย",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.0",
+        "tecnickcom/tcpdf": "^6.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
