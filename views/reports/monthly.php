@@ -594,13 +594,13 @@ for ($m = 1; $m <= 12; $m++) {
                                 <?= e($sale['product_name']) ?>
                             </span>
                         </td>
-                        <td style="background-color: <?= $rowBgColor ?>; border-right: 2px solid <?= $borderColor ?>;">
+                        <td>
                             <?php if ((int)$sale['work_type_id'] === 1): ?>
-                                <span class="badge badge-wt1 rounded-pill">
+                                <span class="badge badge-wt1 rounded-pill print-wt1-color">
                                     <i class="bi bi-cpu me-1"></i><?= e($sale['work_type_name']) ?>
                                 </span>
                             <?php else: ?>
-                                <span class="badge badge-wt2 rounded-pill">
+                                <span class="badge badge-wt2 rounded-pill print-wt2-color">
                                     <i class="bi bi-tools me-1"></i><?= e($sale['work_type_name']) ?>
                                 </span>
                             <?php endif; ?>
@@ -887,5 +887,17 @@ $soldProducts = array_filter($rows, fn($r) => (int)$r['total_qty'] > 0);
     .card { box-shadow: none !important; border: 1px solid #dee2e6 !important; }
     body { font-size: 11pt; }
     table { font-size: 9pt; }
+    
+    /* Work type badges for print - keep background and make text dark for visibility */
+    .print-wt1-color { 
+        background-color: rgba(13, 110, 253, 0.3) !important;
+        color: #0d6efd !important; 
+        font-weight: 600 !important;
+    }
+    .print-wt2-color { 
+        background-color: rgba(21, 115, 71, 0.3) !important;
+        color: #157347 !important; 
+        font-weight: 600 !important;
+    }
 }
 </style>
