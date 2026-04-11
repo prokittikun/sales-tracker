@@ -28,9 +28,14 @@ class SaleController
         $categoryId  = (int) get('category_id', 0);
         $customerId  = (int) get('customer_id', 0);
 
+        $isYearly = ($month === 0);
+
         // Build dynamic WHERE clauses
-        $where  = ['MONTH(s.sale_date) = :month', 'YEAR(s.sale_date) = :year'];
-        $params = [':month' => $month, ':year' => $year];
+        $where  = $isYearly ? ['YEAR(s.sale_date) = :year'] : ['MONTH(s.sale_date) = :month', 'YEAR(s.sale_date) = :year'];
+        $params = [':year' => $year];
+        if (!$isYearly) {
+            $params[':month'] = $month;
+        }
 
         if ($productId > 0) {
             $where[]              = 's.product_id = :product_id';
@@ -81,16 +86,28 @@ class SaleController
         $stmt->execute($params);
         $sales = $stmt->fetchAll();
 
-        // Monthly totals (always show full month totals, ignoring product/work_type filter)
+        // Monthly totals (always show full month/year totals, ignoring product/work_type filter)
+        $totalsWhereDate = $isYearly
+            ? "WHERE YEAR(s.sale_date) = :year"
+            : "WHERE MONTH(s.sale_date) = :month AND YEAR(s.sale_date) = :year";
+
         $totalsStmt = $this->pdo->prepare("
             SELECT
                 COUNT(*)          AS total_rows,
                 SUM(s.quantity)   AS total_qty,
-                SUM(s.price)      AS total_amount
+                SUM(s.price)      AS total_amount,
+                COALESCE(SUM(CASE WHEN s.work_type_id = 1 THEN s.quantity ELSE 0 END), 0) AS wt1_qty,
+                COALESCE(SUM(CASE WHEN s.work_type_id = 1 THEN s.price ELSE 0 END), 0) AS wt1_amount,
+                COALESCE(SUM(CASE WHEN s.work_type_id = 2 THEN s.quantity ELSE 0 END), 0) AS wt2_qty,
+                COALESCE(SUM(CASE WHEN s.work_type_id = 2 THEN s.price ELSE 0 END), 0) AS wt2_amount
             FROM sales s
-            WHERE MONTH(s.sale_date) = :month AND YEAR(s.sale_date) = :year
+            {$totalsWhereDate}
         ");
-        $totalsStmt->execute([':month' => $month, ':year' => $year]);
+        $totalsParams = [':year' => $year];
+        if (!$isYearly) {
+            $totalsParams[':month'] = $month;
+        }
+        $totalsStmt->execute($totalsParams);
         $totals = $totalsStmt->fetch();
 
         // Filter options

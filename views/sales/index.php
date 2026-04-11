@@ -10,6 +10,10 @@ for ($m = 1; $m <= 12; $m++) {
     $months[$m] = thaiMonthName($m);
 }
 
+// ── Determine period display ──────────────────────────────────
+$isYearly = ($month === 0);
+$monthDisplay = $isYearly ? 'ทั้งปี' : thaiMonthName($month);
+
 // ── Summary from $totals ──────────────────────────────────────
 $totalRows   = (int)   ($totals['total_rows']   ?? 0);
 $totalQty    = (int)   ($totals['total_qty']    ?? 0);
@@ -25,7 +29,7 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
             <i class="bi bi-receipt me-2 text-primary"></i>รายการขาย
         </h4>
         <p class="text-muted mb-0 small">
-            <?= thaiMonthName($month) ?> <?= toBuddhistYear($year) ?>
+            <?= $monthDisplay ?> <?= toBuddhistYear($year) ?>
         </p>
     </div>
     <a href="<?= url(['page' => 'sales', 'action' => 'create']) ?>"
@@ -47,6 +51,7 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
             <div class="col-6 col-sm-4 col-md-2">
                 <label class="form-label small fw-semibold mb-1">เดือน</label>
                 <select name="month" class="form-select form-select-sm">
+                    <option value="0"<?= selected($month, 0) ?>>— ทั้งปี —</option>
                     <?php foreach ($months as $num => $name): ?>
                         <option value="<?= $num ?>"<?= selected($month, $num) ?>>
                             <?= e($name) ?>
@@ -174,6 +179,50 @@ $totalAmount = (float) ($totals['total_amount'] ?? 0);
                     </div>
                     <div class="fs-2 text-success opacity-50">
                         <i class="bi bi-currency-exchange"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Work type 1: ขายเฉพาะเครื่อง -->
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card h-100" style="border-left:4px solid #0d6efd !important;">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <p class="text-muted small mb-1">
+                            <span class="badge badge-wt1 rounded-pill me-1">1</span>ขายเฉพาะเครื่อง
+                        </p>
+                        <h5 class="fw-bold mb-0 text-amount text-primary">
+                            <?= formatMoney((float)($totals['wt1_amount'] ?? 0)) ?>
+                        </h5>
+                        <small class="text-muted"><?= number_format((int)($totals['wt1_qty'] ?? 0)) ?> ชิ้น</small>
+                    </div>
+                    <div class="fs-2 opacity-50" style="color:#0d6efd">
+                        <i class="bi bi-cpu-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Work type 2: ขายพร้อมติดตั้ง -->
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card border-success h-100">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <p class="text-muted small mb-1">
+                            <span class="badge badge-wt2 rounded-pill me-1">2</span>ขายพร้อมติดตั้ง
+                        </p>
+                        <h5 class="fw-bold mb-0 text-amount text-success">
+                            <?= formatMoney((float)($totals['wt2_amount'] ?? 0)) ?>
+                        </h5>
+                        <small class="text-muted"><?= number_format((int)($totals['wt2_qty'] ?? 0)) ?> ชิ้น</small>
+                    </div>
+                    <div class="fs-2 text-success opacity-50">
+                        <i class="bi bi-tools"></i>
                     </div>
                 </div>
             </div>

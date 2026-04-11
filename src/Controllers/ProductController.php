@@ -74,6 +74,7 @@ class ProductController
 
             $name       = trim(post('name', ''));
             $categoryId = (int) post('category_id', 0);
+            $notes      = trim(post('notes', ''));
 
             // ── Validation ──────────────────────────────────
             $errors = $this->validateName($name);
@@ -107,9 +108,9 @@ class ProductController
 
             // ── Insert ──────────────────────────────────────
             $stmt = $this->pdo->prepare("
-                INSERT INTO products (name, category_id) VALUES (?, ?)
+                INSERT INTO products (name, category_id, notes) VALUES (?, ?, ?)
             ");
-            $stmt->execute([$name, $categoryId > 0 ? $categoryId : null]);
+            $stmt->execute([$name, $categoryId > 0 ? $categoryId : null, !empty($notes) ? $notes : null]);
 
             oldClear();
             setFlash('success', "เพิ่มสินค้า <strong>" . e($name) . "</strong> เรียบร้อยแล้ว");
@@ -140,6 +141,7 @@ class ProductController
 
             $name       = trim(post('name', ''));
             $categoryId = (int) post('category_id', 0);
+            $notes      = trim(post('notes', ''));
 
             // ── Validation ──────────────────────────────────
             $errors = $this->validateName($name);
@@ -173,9 +175,9 @@ class ProductController
 
             // ── Update ──────────────────────────────────────
             $stmt = $this->pdo->prepare("
-                UPDATE products SET name = ?, category_id = ?, updated_at = NOW() WHERE id = ?
+                UPDATE products SET name = ?, category_id = ?, notes = ?, updated_at = NOW() WHERE id = ?
             ");
-            $stmt->execute([$name, $categoryId > 0 ? $categoryId : null, $id]);
+            $stmt->execute([$name, $categoryId > 0 ? $categoryId : null, !empty($notes) ? $notes : null, $id]);
 
             oldClear();
             setFlash('success', "แก้ไขสินค้า <strong>" . e($name) . "</strong> เรียบร้อยแล้ว");

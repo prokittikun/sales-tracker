@@ -8,6 +8,8 @@ $defaultCategory = $isEdit ? $product['category_id'] : '';
 
 $defaultName     = old('name', $defaultName);
 $defaultCategory = old('category_id', $defaultCategory);
+$defaultNotes    = $isEdit ? ($product['notes'] ?? '') : '';
+$defaultNotes    = old('notes', $defaultNotes);
 oldClear();
 ?>
 
@@ -94,6 +96,25 @@ oldClear();
                         </select>
                     </div>
 
+                    <!-- หมายเหตุสินค้า -->
+                    <div class="mb-4">
+                        <label for="notes" class="form-label fw-semibold">
+                            <i class="bi bi-chat-left-text me-1 text-primary"></i>หมายเหตุ
+                        </label>
+                        <textarea
+                            id="notes"
+                            name="notes"
+                            class="form-control"
+                            rows="4"
+                            placeholder="เช่น ข้อมูลเพิ่มเติม, ลักษณะพิเศษ, หมายเหตุอื่น ๆ"
+                            maxlength="1000"
+                        ><?= e($defaultNotes) ?></textarea>
+                        <div class="form-text text-muted d-flex justify-content-between">
+                            <span><i class="bi bi-info-circle me-1"></i>เขียนหมายเหตุเพิ่มเติมเกี่ยวกับสินค้า</span>
+                            <span id="notesCount">0</span>/1000
+                        </div>
+                    </div>
+
                     <?php if ($isEdit): ?>
                     <!-- Info block (edit mode) -->
                     <div class="alert alert-light border py-2 px-3 mb-4 small">
@@ -169,8 +190,10 @@ oldClear();
     'use strict';
     var nameEl    = document.getElementById('name');
     var nameCount = document.getElementById('nameCount');
+    var notesEl   = document.getElementById('notes');
+    var notesCount = document.getElementById('notesCount');
 
-    function update() {
+    function updateName() {
         var len = nameEl ? nameEl.value.length : 0;
         if (nameCount) {
             nameCount.textContent = len;
@@ -178,9 +201,22 @@ oldClear();
         }
     }
 
+    function updateNotes() {
+        var len = notesEl ? notesEl.value.length : 0;
+        if (notesCount) {
+            notesCount.textContent = len;
+            notesCount.classList.toggle('text-danger', len > 900);
+        }
+    }
+
     if (nameEl) {
-        nameEl.addEventListener('input', update);
-        update();
+        nameEl.addEventListener('input', updateName);
+        updateName();
+    }
+
+    if (notesEl) {
+        notesEl.addEventListener('input', updateNotes);
+        updateNotes();
     }
 })();
 </script>

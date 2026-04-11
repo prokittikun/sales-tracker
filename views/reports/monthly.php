@@ -27,7 +27,7 @@ for ($m = 1; $m <= 12; $m++) {
     </div>
     <div class="d-flex gap-2 flex-wrap align-items-center no-print">
         <!-- PDF Export -->
-        <a href="<?= url(['page' => 'reports', 'action' => 'pdf', 'month' => $month, 'year' => $year, 'category_id' => $categoryId]) ?>"
+        <a href="<?= url(['page' => 'reports', 'action' => 'pdf', 'month' => $month, 'year' => $year, 'customer_id' => $customerId, 'category_id' => $categoryId, 'product_id' => $productId]) ?>"
            class="btn btn-danger d-flex align-items-center gap-2"
            target="_blank">
             <i class="bi bi-file-earmark-pdf-fill"></i>
@@ -75,10 +75,23 @@ for ($m = 1; $m <= 12; $m++) {
                 </select>
             </div>
 
+            <!-- Customer filter -->
+            <div class="col-6 col-sm-4 col-md-2">
+                <label class="form-label small fw-semibold mb-1">ลูกค้า</label>
+                <select name="customer_id" class="form-select form-select-sm">
+                    <option value="0">— ทุกลูกค้า —</option>
+                    <?php foreach ($customers as $cust): ?>
+                        <option value="<?= $cust['id'] ?>"<?= selected($customerId, $cust['id']) ?>>
+                            <?= e($cust['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <!-- Category filter -->
             <div class="col-6 col-sm-4 col-md-2">
                 <label class="form-label small fw-semibold mb-1">หมวดหมู่</label>
-                <select name="category_id" class="form-select form-select-sm">
+                <select name="category_id" id="categoryFilter" class="form-select form-select-sm">
                     <option value="0">— ทุกหมวดหมู่ —</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?= $cat['id'] ?>"<?= selected($categoryId, $cat['id']) ?>>
@@ -88,11 +101,31 @@ for ($m = 1; $m <= 12; $m++) {
                 </select>
             </div>
 
+            <!-- Product filter -->
+            <div class="col-6 col-sm-4 col-md-2">
+                <label class="form-label small fw-semibold mb-1">สินค้า</label>
+                <select name="product_id" id="productFilter" class="form-select form-select-sm">
+                    <option value="0">— ทุกสินค้า —</option>
+                    <?php foreach ($allProducts as $p): ?>
+                        <?php if ($categoryId === 0 || (int)($p['category_id'] ?? 0) === $categoryId): ?>
+                            <option value="<?= $p['id'] ?>"<?= selected($productId, $p['id']) ?>>
+                                <?= e($p['name']) ?>
+                            </option>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <!-- Buttons -->
-            <div class="col-12 col-md-4 d-flex gap-2">
+            <div class="col-12 col-md-auto d-flex gap-2">
                 <button type="submit" class="btn btn-sm btn-dark flex-grow-1">
                     <i class="bi bi-search me-1"></i>ดูรายงาน
                 </button>
+                <a href="<?= url(['page' => 'reports', 'month' => $month, 'year' => $year]) ?>"
+                   class="btn btn-sm btn-outline-secondary"
+                   data-bs-toggle="tooltip" title="ล้างตัวกรอง">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
             </div>
         </form>
     </div>
@@ -312,7 +345,8 @@ for ($m = 1; $m <= 12; $m++) {
                 <tbody>
                     <?php foreach ($rows as $idx => $row): ?>
                     <?php $hasSales = (int)$row['total_qty'] > 0; ?>
-                    <tr class="<?= !$hasSales ? 'text-muted' : '' ?>">
+                    <?php if (!$hasSales) continue; ?>
+                    <tr>
                         <!-- # -->
                         <td class="text-center text-muted small"><?= $idx + 1 ?></td>
 
@@ -323,12 +357,9 @@ for ($m = 1; $m <= 12; $m++) {
                                       style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">
                                     <?= mb_substr(e($row['product_name']), 0, 1) ?>
                                 </span>
-                                <span class="fw-semibold <?= !$hasSales ? 'text-muted' : '' ?>">
+                                <span class="fw-semibold">
                                     <?= e($row['product_name']) ?>
                                 </span>
-                                <?php if (!$hasSales): ?>
-                                    <span class="badge bg-light text-muted border small fw-normal">ไม่มีการขาย</span>
-                                <?php endif; ?>
                             </div>
                         </td>
 
@@ -780,6 +811,68 @@ $soldProducts = array_filter($rows, fn($r) => (int)$r['total_qty'] > 0);
     </a>
 </div>
 <?php endif; ?>
+
+<!-- Dynamic product filter script -->
+<script>
+(function() {
+    'use strict';
+    
+    // Product data from server
+    const allProducts = <?= $allProductsJson ?>;
+    const categoryFilter = document.getElementById('categoryFilter') || document.querySelector('[name="category_id"]');
+    const productFilter = document.getElementById('productFilter') || document.querySelector('[name="product_id"]');
+    const currentProductId = <?= (int)$productId ?>;
+    
+    if (!categoryFilter || !productFilter) {
+        return;
+    }
+    
+    function updateProductFilter() {
+        const selectedCategoryId = parseInt(categoryFilter.value);
+        const currentProductValue = productFilter.value;
+        
+        // Filter products by selected category
+        const filteredProducts = selectedCategoryId === 0
+            ? allProducts
+            : allProducts.filter(p => p.category_id === selectedCategoryId);
+        
+        // Store current options
+        const options = productFilter.querySelectorAll('option');
+        let defaultOptionHtml = '';
+        
+        // Find and preserve the "all products" option
+        options.forEach(opt => {
+            if (opt.value === '0') {
+                defaultOptionHtml = opt.outerHTML;
+            }
+        });
+        
+        // Build new options
+        let newHtml = defaultOptionHtml;
+        filteredProducts.forEach(product => {
+            const isSelected = parseInt(currentProductValue) === product.id ? 'selected' : '';
+            newHtml += `<option value="${product.id}" ${isSelected}>${escapeHtml(product.name)}</option>`;
+        });
+        
+        // Update select
+        productFilter.innerHTML = newHtml;
+        
+        // If current product is not in filtered list, reset to "all"
+        if (!filteredProducts.find(p => p.id === parseInt(currentProductValue))) {
+            productFilter.value = '0';
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Update on category change
+    categoryFilter.addEventListener('change', updateProductFilter);
+})();
+</script>
 
 <!-- Print-specific styles -->
 <style>

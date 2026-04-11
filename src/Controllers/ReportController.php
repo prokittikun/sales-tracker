@@ -22,33 +22,48 @@ class ReportController
 
     // ──────────────────────────────────────────────────────────
     // index() — Monthly report page (or yearly when month = 0)
-    // GET ?page=reports[&month=M&year=Y&category_id=X]
+    // GET ?page=reports[&month=M&year=Y&customer_id=X&category_id=X&product_id=X]
     // month = 0 means yearly summary
     // ──────────────────────────────────────────────────────────
     public function index(): void
     {
         $month      = (int) get('month', (int) date('m'));
         $year       = (int) get('year',  (int) date('Y'));
+        $customerId = (int) get('customer_id', 0);
         $categoryId = (int) get('category_id', 0);
+        $productId  = (int) get('product_id', 0);
 
-        $reportData = $this->buildReportData($month, $year, $categoryId);
+        $reportData = $this->buildReportData($month, $year, $customerId, $categoryId, $productId);
         $years      = range((int) date('Y') - 2, (int) date('Y') + 1);
+        $customers  = $this->pdo->query("SELECT id, name FROM customers ORDER BY name")->fetchAll();
         $categories = $this->pdo->query("SELECT id, name FROM categories ORDER BY name")->fetchAll();
+        
+        // Fetch all products for dynamic filtering
+        $allProducts = $this->pdo->query("SELECT id, name, category_id FROM products ORDER BY name")->fetchAll();
+        
+        // Convert to JSON for JavaScript filtering
+        $allProductsJson = json_encode(array_map(fn($p) => [
+            'id' => $p['id'],
+            'name' => $p['name'],
+            'category_id' => (int)($p['category_id'] ?? 0)
+        ], $allProducts));
 
-        render('reports/monthly', array_merge($reportData, compact('month', 'year', 'years', 'categories', 'categoryId')));
+        render('reports/monthly', array_merge($reportData, compact('month', 'year', 'years', 'customers', 'categories', 'allProducts', 'allProductsJson', 'customerId', 'categoryId', 'productId')));
     }
 
     // ──────────────────────────────────────────────────────────
     // pdf() — Generate and stream a PDF report
-    // GET ?page=reports&action=pdf&month=M&year=Y&category_id=X
+    // GET ?page=reports&action=pdf&month=M&year=Y&customer_id=X&category_id=X&product_id=X
     // ──────────────────────────────────────────────────────────
     public function pdf(): void
     {
         $month      = (int) get('month', (int) date('m'));
         $year       = (int) get('year',  (int) date('Y'));
+        $customerId = (int) get('customer_id', 0);
         $categoryId = (int) get('category_id', 0);
+        $productId  = (int) get('product_id', 0);
 
-        $reportData = $this->buildReportData($month, $year, $categoryId);
+        $reportData = $this->buildReportData($month, $year, $customerId, $categoryId, $productId);
 
         // TCPDF autoload check
         if (!class_exists('TCPDF')) {
@@ -82,17 +97,25 @@ class ReportController
      *   isYearly: bool
      * }
      */
-    private function buildReportData(int $month, int $year, int $categoryId = 0): array
+    private function buildReportData(int $month, int $year, int $customerId = 0, int $categoryId = 0, int $productId = 0): array
     {
         $isYearly = ($month === 0);
 
-        // ── Per-product summary ─────────────────────────────
+        // ── Per-product summary ────────────────────────
         $whereDate = $isYearly
             ? "AND YEAR(s.sale_date) = :year"
             : "AND MONTH(s.sale_date) = :month AND YEAR(s.sale_date) = :year";
 
+        $whereCustomer = ($customerId > 0)
+            ? "AND s.customer_id = :customer_id"
+            : "";
+
         $whereCategory = ($categoryId > 0)
             ? "AND p.category_id = :category_id"
+            : "";
+
+        $whereProduct = ($productId > 0)
+            ? "AND p.id = :product_id"
             : "";
 
         $stmt = $this->pdo->prepare("
@@ -115,7 +138,9 @@ class ReportController
             LEFT JOIN sales s
                    ON s.product_id = p.id
                   {$whereDate}
+                  {$whereCustomer}
                   {$whereCategory}
+                  {$whereProduct}
             GROUP BY p.id, p.name, p.category_id, c.name
             ORDER BY p.name ASC
         ");
@@ -124,8 +149,14 @@ class ReportController
         if (!$isYearly) {
             $params[':month'] = $month;
         }
+        if ($customerId > 0) {
+            $params[':customer_id'] = $customerId;
+        }
         if ($categoryId > 0) {
             $params[':category_id'] = $categoryId;
+        }
+        if ($productId > 0) {
+            $params[':product_id'] = $productId;
         }
 
         $stmt->execute($params);
@@ -153,8 +184,16 @@ class ReportController
             ? "WHERE YEAR(s.sale_date) = :year"
             : "WHERE MONTH(s.sale_date) = :month AND YEAR(s.sale_date) = :year";
 
+        $dailyWhereCustomer = ($customerId > 0)
+            ? "AND s.customer_id = :customer_id"
+            : "";
+
         $dailyWhereCategory = ($categoryId > 0)
             ? "AND p.category_id = :category_id"
+            : "";
+
+        $dailyWhereProduct = ($productId > 0)
+            ? "AND p.id = :product_id"
             : "";
 
         $dailyStmt = $this->pdo->prepare("
@@ -173,7 +212,9 @@ class ReportController
             JOIN  customers  c  ON c.id  = s.customer_id
             JOIN  work_types wt ON wt.id = s.work_type_id
             {$dailyWhereDate}
+            {$dailyWhereCustomer}
             {$dailyWhereCategory}
+            {$dailyWhereProduct}
             ORDER BY s.sale_date ASC, s.id ASC
         ");
 
@@ -181,8 +222,14 @@ class ReportController
         if (!$isYearly) {
             $dailyParams[':month'] = $month;
         }
+        if ($customerId > 0) {
+            $dailyParams[':customer_id'] = $customerId;
+        }
         if ($categoryId > 0) {
             $dailyParams[':category_id'] = $categoryId;
+        }
+        if ($productId > 0) {
+            $dailyParams[':product_id'] = $productId;
         }
 
         $dailyStmt->execute($dailyParams);

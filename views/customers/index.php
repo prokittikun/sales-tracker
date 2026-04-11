@@ -283,7 +283,7 @@ $overallWt2Amount    = array_sum(array_column($customers, 'wt2_amount'));
                         <td class="text-center">
                             <div class="d-flex gap-1 justify-content-center">
                                 <!-- View sales -->
-                                <a href="<?= url(['page' => 'sales', 'customer_id' => $customer['id'], 'month' => date('n'), 'year' => date('Y')]) ?>"
+                                <a href="<?= url(['page' => 'sales', 'customer_id' => $customer['id'], 'month' => 0, 'year' => date('Y')]) ?>"
                                    class="btn btn-sm btn-outline-secondary"
                                    data-bs-toggle="tooltip"
                                    title="ดูรายการขาย">
@@ -408,14 +408,23 @@ usort($topCustomers, fn($a, $b) => (float)$b['total_amount'] <=> (float)$a['tota
 $topCustomers = array_slice($topCustomers, 0, 6);
 ?>
 <?php if (!empty($topCustomers)): ?>
-<div class="mt-4 mb-2">
-    <h6 class="fw-semibold text-muted">
-        <i class="bi bi-trophy me-1 text-warning"></i>ลูกค้าที่มียอดซื้อสูงสุด
-    </h6>
+<div class="mt-4">
+    <div class="mb-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-semibold text-muted mb-0">
+            <i class="bi bi-trophy me-1 text-warning"></i>ลูกค้าที่มียอดซื้อสูงสุด
+        </h6>
+        <div style="flex: 1; max-width: 250px;">
+            <input type="text" 
+                   id="topCustomerSearch" 
+                   class="form-control form-control-sm" 
+                   placeholder="ค้นหาชื่อลูกค้า..."
+                   style="font-size: 0.9rem;">
+        </div>
+    </div>
 </div>
-<div class="row g-3">
+<div class="row g-3" id="topCustomersGrid">
     <?php foreach ($topCustomers as $rank => $customer): ?>
-    <div class="col-12 col-md-6 col-xl-4">
+    <div class="col-12 col-md-6 col-xl-4 top-customer-card" data-customer-name="<?= e(mb_strtolower($customer['name'])) ?>">
         <div class="card h-100">
             <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between gap-2">
                 <div class="d-flex align-items-center gap-2">
@@ -433,10 +442,22 @@ $topCustomers = array_slice($topCustomers, 0, 6);
                     <?php endif; ?>
                     <span class="fw-semibold"><?= e($customer['name']) ?></span>
                 </div>
-                <a href="<?= url(['page' => 'customers', 'action' => 'edit', 'id' => $customer['id']]) ?>"
-                   class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
-                    <i class="bi bi-pencil"></i>
-                </a>
+                <div class="d-flex gap-1">
+                    <!-- View sales -->
+                    <a href="<?= url(['page' => 'sales', 'customer_id' => $customer['id'], 'month' => 0, 'year' => date('Y')]) ?>"
+                       class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2"
+                       data-bs-toggle="tooltip"
+                       title="ดูรายการขาย">
+                        <i class="bi bi-eye-fill"></i>
+                    </a>
+                    <!-- Edit -->
+                    <a href="<?= url(['page' => 'customers', 'action' => 'edit', 'id' => $customer['id']]) ?>"
+                       class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2"
+                       data-bs-toggle="tooltip"
+                       title="แก้ไข">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </div>
             </div>
             <div class="card-body pb-2">
 
@@ -529,4 +550,28 @@ $topCustomers = array_slice($topCustomers, 0, 6);
     </div>
     <?php endforeach; ?>
 </div>
+
+<!-- Search filter script -->
+<script>
+(() => {
+    const searchInput = document.getElementById('topCustomerSearch');
+    const cards = document.querySelectorAll('.top-customer-card');
+    let debounceTimer;
+
+    const filterCards = () => {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+
+        cards.forEach(card => {
+            const customerName = card.getAttribute('data-customer-name') || '';
+            const matches = customerName.includes(searchTerm);
+            card.style.display = matches ? '' : 'none';
+        });
+    };
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(filterCards, 300);
+    });
+})();
+</script>
 <?php endif; ?>
