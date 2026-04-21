@@ -405,7 +405,6 @@ $overallWt2Amount    = array_sum(array_column($customers, 'wt2_amount'));
 <?php
 $topCustomers = array_filter($customers, fn($c) => (float)$c['total_amount'] > 0);
 usort($topCustomers, fn($a, $b) => (float)$b['total_amount'] <=> (float)$a['total_amount']);
-$topCustomers = array_slice($topCustomers, 0, 6);
 ?>
 <?php if (!empty($topCustomers)): ?>
 <div class="mt-4">
